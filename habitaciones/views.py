@@ -1,10 +1,18 @@
+from datetime import date
+
 from django.contrib import messages
-from django.shortcuts import get_object_or_404, redirect, render
+from django.db.models import ProtectedError
 from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from django.views.decorators.cache import never_cache
 
-from .models import Habitacion
+from .forms import HabitacionForm, HuespedForm, ReservaForm, lista_de_errores
+from .models import Habitacion, Huesped, Reserva
 
-@login_required(login_url='/ingreso/')
+
+# Inicio
+@never_cache
+@login_required
 def inicio(request):
     habitaciones = Habitacion.objects.all().order_by("numero")
     disponibles = Habitacion.objects.filter(disponible=True).count()
@@ -18,158 +26,208 @@ def inicio(request):
     }
     return render(request, "habitaciones/inicio.html", context)
 
-@login_required(login_url='/ingreso/')
+
+# CRUD Habitaciones
+
+# Listar
+@never_cache
+@login_required
 def lista_habitaciones(request):
     habitaciones = Habitacion.objects.all().order_by("numero")
-    return render(
-        request,
-        "habitaciones/lista.html",
-        {"habitaciones": habitaciones},
-    )
+    return render(request, "habitaciones/lista.html", {"habitaciones": habitaciones})
 
-@login_required(login_url='/ingreso/')
+
+# Crear
+@never_cache
+@login_required
 def crear_habitacion(request):
     if request.method == "POST":
-        numero = request.POST.get("numero", "").strip()
-        tipo = request.POST.get("tipo", "").strip()
-        precio = request.POST.get("precio", "").strip()
-        disponible = request.POST.get("disponible") == "on"
-
-        errores = []
-
-        if not numero:
-            errores.append("El número de habitación es obligatorio.")
-        else:
-            try:
-                numero = int(numero)
-                if numero <= 0:
-                    errores.append("El número de habitación debe ser mayor que cero.")
-                elif numero > 2147483647:
-                    errores.append("El número de habitación supera el máximo permitido.")
-            except ValueError:
-                errores.append("El número de habitación debe ser un número entero.")
-
-        if not tipo:
-            errores.append("El tipo de habitación es obligatorio.")
-        elif len(tipo) > 30:
-            errores.append("El tipo de habitación no puede superar los 30 caracteres.")
-
-        if not precio:
-            errores.append("El precio por noche es obligatorio.")
-        else:
-            try:
-                precio = int(precio)
-                if precio <= 0:
-                    errores.append("El precio debe ser mayor que cero.")
-                elif precio > 9999999:
-                    errores.append("El precio máximo permitido es 9.999.999.")
-            except ValueError:
-                errores.append("El precio debe ser un número entero.")
-
-        if not errores and Habitacion.objects.filter(numero=numero).exists():
-            errores.append(f"Ya existe una habitación con el número {numero}.")
-
-        if errores:
-            context = {
-                "errores": errores,
-                "datos": request.POST,
-            }
-            return render(request, "habitaciones/crear.html", context)
-
-        Habitacion.objects.create(
-            numero=numero,
-            tipo=tipo,
-            precio=precio,
-            disponible=disponible,
-        )
-        messages.success(request, "La habitación fue registrada correctamente.")
-        return redirect("lista_habitaciones")
+        form = HabitacionForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "La habitación fue registrada correctamente.")
+            return redirect("lista_habitaciones")
+        context = {"errores": lista_de_errores(form), "datos": request.POST}
+        return render(request, "habitaciones/crear.html", context)
 
     return render(request, "habitaciones/crear.html")
 
-@login_required(login_url='/ingreso/')
+
+# Editar
+@never_cache
+@login_required
 def editar_habitacion(request, pk):
     habitacion = get_object_or_404(Habitacion, pk=pk)
 
     if request.method == "POST":
-        numero = request.POST.get("numero", "").strip()
-        tipo = request.POST.get("tipo", "").strip()
-        precio = request.POST.get("precio", "").strip()
-        disponible = request.POST.get("disponible") == "on"
-
-        errores = []
-
-        if not numero:
-            errores.append("El número de habitación es obligatorio.")
-        else:
-            try:
-                numero = int(numero)
-                if numero <= 0:
-                    errores.append("El número de habitación debe ser mayor que cero.")
-                elif numero > 2147483647:
-                    errores.append("El número de habitación supera el máximo permitido.")
-            except ValueError:
-                errores.append("El número de habitación debe ser un número entero.")
-
-        if not tipo:
-            errores.append("El tipo de habitación es obligatorio.")
-        elif len(tipo) > 30:
-            errores.append("El tipo de habitación no puede superar los 30 caracteres.")
-
-        if not precio:
-            errores.append("El precio por noche es obligatorio.")
-        else:
-            try:
-                precio = int(precio)
-                if precio <= 0:
-                    errores.append("El precio debe ser mayor que cero.")
-                elif precio > 9999999:
-                    errores.append("El precio máximo permitido es 9.999.999.")
-            except ValueError:
-                errores.append("El precio debe ser un número entero.")
-
-        numero_repetido = (
-            Habitacion.objects.filter(numero=numero)
-            .exclude(pk=habitacion.pk)
-            .exists()
-            if isinstance(numero, int)
-            else False
-        )
-
-        if numero_repetido:
-            errores.append(f"Ya existe otra habitación con el número {numero}.")
-
-        if errores:
-            context = {
-                "habitacion": habitacion,
-                "errores": errores,
-                "datos": request.POST,
-            }
-            return render(request, "habitaciones/editar.html", context)
-
-        habitacion.numero = numero
-        habitacion.tipo = tipo
-        habitacion.precio = precio
-        habitacion.disponible = disponible
-        habitacion.save()
-
-        messages.success(request, "La habitación fue modificada correctamente.")
-        return redirect("lista_habitaciones")
+        form = HabitacionForm(request.POST, instance=habitacion)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "La habitación fue modificada correctamente.")
+            return redirect("lista_habitaciones")
+        habitacion = get_object_or_404(Habitacion, pk=pk)
+        context = {
+            "habitacion": habitacion,
+            "errores": lista_de_errores(form),
+            "datos": request.POST,
+        }
+        return render(request, "habitaciones/editar.html", context)
 
     return render(request, "habitaciones/editar.html", {"habitacion": habitacion})
 
-@login_required(login_url='/ingreso/')
+
+# Eliminar
+@never_cache
+@login_required
 def eliminar_habitacion(request, pk):
     habitacion = get_object_or_404(Habitacion, pk=pk)
 
     if request.method == "POST":
         numero = habitacion.numero
-        habitacion.delete()
+        try:
+            habitacion.delete()
+        except ProtectedError:
+            messages.error(
+                request,
+                f"No se puede eliminar la habitación {numero}: tiene reservas asociadas. "
+                "Elimina o cancela primero esas reservas.",
+            )
+            return redirect("lista_habitaciones")
         messages.success(request, f"La habitación {numero} fue eliminada correctamente.")
         return redirect("lista_habitaciones")
 
-    return render(
-        request,
-        "habitaciones/eliminar.html",
-        {"habitacion": habitacion},
-    )
+    return render(request, "habitaciones/eliminar.html", {"habitacion": habitacion})
+
+
+# CRUD Huespedes
+
+# Listar
+@never_cache
+@login_required
+def lista_huespedes(request):
+    return render(request, "habitaciones/huesped_lista.html", {"huespedes": Huesped.objects.all()})
+
+
+# Crear
+@never_cache
+@login_required
+def crear_huesped(request):
+    if request.method == "POST":
+        form = HuespedForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "El huésped fue registrado correctamente.")
+            return redirect("lista_huespedes")
+        return render(request, "habitaciones/huesped_form.html",
+                      {"errores": lista_de_errores(form), "datos": request.POST})
+    return render(request, "habitaciones/huesped_form.html")
+
+
+# Editar
+@never_cache
+@login_required
+def editar_huesped(request, pk):
+    huesped = get_object_or_404(Huesped, pk=pk)
+    if request.method == "POST":
+        form = HuespedForm(request.POST, instance=huesped)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "El huésped fue modificado correctamente.")
+            return redirect("lista_huespedes")
+        huesped = get_object_or_404(Huesped, pk=pk)
+        return render(request, "habitaciones/huesped_form.html",
+                      {"huesped": huesped, "errores": lista_de_errores(form), "datos": request.POST})
+    return render(request, "habitaciones/huesped_form.html", {"huesped": huesped})
+
+
+# Eliminar
+@never_cache
+@login_required
+def eliminar_huesped(request, pk):
+    huesped = get_object_or_404(Huesped, pk=pk)
+    if request.method == "POST":
+        nombre = huesped.nombre_completo
+        try:
+            huesped.delete()
+        except ProtectedError:
+            messages.error(
+                request,
+                f"No se puede eliminar a {nombre}: tiene reservas asociadas. "
+                "Elimina primero esas reservas.",
+            )
+            return redirect("lista_huespedes")
+        messages.success(request, f"El huésped {nombre} fue eliminado correctamente.")
+        return redirect("lista_huespedes")
+    return render(request, "habitaciones/huesped_eliminar.html", {"huesped": huesped})
+
+
+# CRUD Reservas
+
+# Datos para el formulario
+def _contexto_reserva(form, reserva=None, datos=None):
+    return {
+        "form": form,
+        "reserva": reserva,
+        "errores": lista_de_errores(form) if form.is_bound else [],
+        "hoy": date.today().isoformat(),
+        "hay_huespedes": Huesped.objects.exists(),
+        "hay_habitaciones": Habitacion.objects.filter(disponible=True).exists(),
+    }
+
+
+# Listar
+@never_cache
+@login_required
+def lista_reservas(request):
+    reservas = Reserva.objects.select_related("habitacion", "huesped")
+    return render(request, "habitaciones/reserva_lista.html", {"reservas": reservas})
+
+
+# Crear
+@never_cache
+@login_required
+def crear_reserva(request):
+    if request.method == "POST":
+        form = ReservaForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "La reserva fue registrada correctamente.")
+            return redirect("lista_reservas")
+        return render(request, "habitaciones/reserva_form.html", _contexto_reserva(form))
+    return render(request, "habitaciones/reserva_form.html", _contexto_reserva(ReservaForm()))
+
+
+# Editar
+@never_cache
+@login_required
+def editar_reserva(request, pk):
+    reserva = get_object_or_404(Reserva, pk=pk)
+    if reserva.estado in (Reserva.FINALIZADA, Reserva.CANCELADA):
+        messages.error(request, "Una reserva finalizada o cancelada ya no se puede modificar.")
+        return redirect("lista_reservas")
+    if request.method == "POST":
+        form = ReservaForm(request.POST, instance=reserva)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "La reserva fue modificada correctamente.")
+            return redirect("lista_reservas")
+        reserva = get_object_or_404(Reserva, pk=pk)
+        return render(request, "habitaciones/reserva_form.html", _contexto_reserva(form, reserva))
+    return render(request, "habitaciones/reserva_form.html",
+                  _contexto_reserva(ReservaForm(instance=reserva), reserva))
+
+
+# Eliminar
+@never_cache
+@login_required
+def eliminar_reserva(request, pk):
+    reserva = get_object_or_404(Reserva, pk=pk)
+    if reserva.estado == Reserva.EN_CURSO:
+        messages.error(request, "No se puede eliminar una reserva en curso. Finalízala primero.")
+        return redirect("lista_reservas")
+    if request.method == "POST":
+        numero = reserva.pk
+        reserva.delete()
+        messages.success(request, f"La reserva #{numero} fue eliminada correctamente.")
+        return redirect("lista_reservas")
+    return render(request, "habitaciones/reserva_eliminar.html", {"reserva": reserva})
