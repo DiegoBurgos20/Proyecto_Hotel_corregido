@@ -5,7 +5,7 @@
 {% block content %}
 <section class="page-heading">
     <div>
-        <p class="eyebrow">LIBRO DE REGISTRO</p>
+        <p class="eyebrow">ADMINISTRACIÓN</p>
         <h1>Habitaciones</h1>
         <p>Consulta, modifica o elimina las habitaciones registradas.</p>
     </div>
@@ -27,14 +27,14 @@
         <tbody>
             {% for habitacion in habitaciones %}
             <tr>
-                <td><strong><span class="table-door">▣</span> Habitación {{ habitacion.numero }}</strong></td>
+                <td><strong>Habitación {{ habitacion.numero }}</strong></td>
                 <td>{{ habitacion.tipo }}</td>
                 <td>${{ habitacion.precio }}</td>
                 <td>
                     {% if habitacion.disponible %}
-                        <span class="status available">● Disponible</span>
+                        <span class="status available">Disponible</span>
                     {% else %}
-                        <span class="status occupied">● No disponible</span>
+                        <span class="status occupied">No disponible</span>
                     {% endif %}
                 </td>
                 <td class="actions">
@@ -48,7 +48,7 @@
 </div>
 {% else %}
 <div class="empty-state">
-    <div class="empty-icon">▣</div>
+    <div class="empty-icon">⌂</div>
     <h3>No hay habitaciones registradas</h3>
     <p>Registra una habitación para comenzar a administrar el hotel.</p>
     <a class="button primary" href="{% url 'crear_habitacion' %}">Registrar habitación</a>

@@ -6,7 +6,7 @@
 <section class="delete-page">
     <div class="delete-card">
         <div class="warning-icon">!</div>
-        <p class="eyebrow">PUERTA CERRADA</p>
+        <p class="eyebrow">CONFIRMAR ELIMINACIÓN</p>
         <h1>¿Eliminar esta habitación?</h1>
         <p>
             Estás a punto de eliminar la <strong>Habitación {{ habitacion.numero }}</strong>,
@@ -16,8 +16,8 @@
 
         <form method="post" class="form-actions centered">
             {% csrf_token %}
-            <a class="button secondary" href="{% url 'lista_habitaciones' %}">Mantener puerta</a>
-            <button class="button danger" type="submit">Eliminar habitación</button>
+            <a class="button secondary" href="{% url 'lista_habitaciones' %}">Cancelar</a>
+            <button class="button danger" type="submit">Sí, eliminar</button>
         </form>
     </div>
 </section>

@@ -1,26 +1,13 @@
 from django.db import models
-from django.core.validators import MinLengthValidator, MinValueValidator, MaxValueValidator
+
+# Create your models here.
 
 
 class Habitacion(models.Model):
-    numero = models.IntegerField(
-        unique=True, validators=[MinValueValidator(1), MaxValueValidator(2147483647)],
-        verbose_name="Número de Habitación"
-    )
-    tipo = models.CharField(
-        max_length=30, validators=[MinLengthValidator(3)],
-        verbose_name="Tipo de Habitación"
-    )
-    precio = models.IntegerField(
-        validators=[MinValueValidator(1), MaxValueValidator(9999999)],
-        verbose_name="Precio por Noche"
-    )
+    numero = models.IntegerField(unique=True, verbose_name="Número de Habitación")
+    tipo = models.CharField(max_length=50, verbose_name="Tipo de Habitación")
+    precio = models.IntegerField(verbose_name="Precio por Noche")
     disponible = models.BooleanField(default=True, verbose_name="¿Está Disponible?")
 
     def __str__(self):
         return f"Habitación {self.numero}"
-
-    class Meta:
-        ordering = ["numero"]
-        verbose_name = "Habitación"
-        verbose_name_plural = "Habitaciones"
