@@ -1,10 +1,9 @@
 from django.contrib import messages
 from django.shortcuts import get_object_or_404, redirect, render
-from django.contrib.auth.decorators import login_required
 
 from .models import Habitacion
 
-@login_required(login_url='/ingreso/')
+
 def inicio(request):
     habitaciones = Habitacion.objects.all().order_by("numero")
     disponibles = Habitacion.objects.filter(disponible=True).count()
@@ -18,7 +17,7 @@ def inicio(request):
     }
     return render(request, "habitaciones/inicio.html", context)
 
-@login_required(login_url='/ingreso/')
+
 def lista_habitaciones(request):
     habitaciones = Habitacion.objects.all().order_by("numero")
     return render(
@@ -27,7 +26,7 @@ def lista_habitaciones(request):
         {"habitaciones": habitaciones},
     )
 
-@login_required(login_url='/ingreso/')
+
 def crear_habitacion(request):
     if request.method == "POST":
         numero = request.POST.get("numero", "").strip()
@@ -44,15 +43,13 @@ def crear_habitacion(request):
                 numero = int(numero)
                 if numero <= 0:
                     errores.append("El número de habitación debe ser mayor que cero.")
-                elif numero > 2147483647:
-                    errores.append("El número de habitación supera el máximo permitido.")
             except ValueError:
                 errores.append("El número de habitación debe ser un número entero.")
 
         if not tipo:
             errores.append("El tipo de habitación es obligatorio.")
-        elif len(tipo) > 30:
-            errores.append("El tipo de habitación no puede superar los 30 caracteres.")
+        elif len(tipo) > 50:
+            errores.append("El tipo de habitación no puede superar los 50 caracteres.")
 
         if not precio:
             errores.append("El precio por noche es obligatorio.")
@@ -61,8 +58,6 @@ def crear_habitacion(request):
                 precio = int(precio)
                 if precio <= 0:
                     errores.append("El precio debe ser mayor que cero.")
-                elif precio > 9999999:
-                    errores.append("El precio máximo permitido es 9.999.999.")
             except ValueError:
                 errores.append("El precio debe ser un número entero.")
 
@@ -87,7 +82,7 @@ def crear_habitacion(request):
 
     return render(request, "habitaciones/crear.html")
 
-@login_required(login_url='/ingreso/')
+
 def editar_habitacion(request, pk):
     habitacion = get_object_or_404(Habitacion, pk=pk)
 
@@ -106,15 +101,13 @@ def editar_habitacion(request, pk):
                 numero = int(numero)
                 if numero <= 0:
                     errores.append("El número de habitación debe ser mayor que cero.")
-                elif numero > 2147483647:
-                    errores.append("El número de habitación supera el máximo permitido.")
             except ValueError:
                 errores.append("El número de habitación debe ser un número entero.")
 
         if not tipo:
             errores.append("El tipo de habitación es obligatorio.")
-        elif len(tipo) > 30:
-            errores.append("El tipo de habitación no puede superar los 30 caracteres.")
+        elif len(tipo) > 50:
+            errores.append("El tipo de habitación no puede superar los 50 caracteres.")
 
         if not precio:
             errores.append("El precio por noche es obligatorio.")
@@ -123,8 +116,6 @@ def editar_habitacion(request, pk):
                 precio = int(precio)
                 if precio <= 0:
                     errores.append("El precio debe ser mayor que cero.")
-                elif precio > 9999999:
-                    errores.append("El precio máximo permitido es 9.999.999.")
             except ValueError:
                 errores.append("El precio debe ser un número entero.")
 
@@ -158,7 +149,7 @@ def editar_habitacion(request, pk):
 
     return render(request, "habitaciones/editar.html", {"habitacion": habitacion})
 
-@login_required(login_url='/ingreso/')
+
 def eliminar_habitacion(request, pk):
     habitacion = get_object_or_404(Habitacion, pk=pk)
 
